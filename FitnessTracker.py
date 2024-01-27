@@ -265,29 +265,45 @@ def CreateTableImage(filename):
     # Load the CSV data into a pandas DataFrame
     df = pd.read_csv(filename)
 
-    # Determine the size of the figure
+    # Determine the size of the figure dynamically
     figure_width = max(24, len(df.columns) * 1.5)  # Adjust as needed
-    figure_height = max(8, len(df.index) * 0.4)  # Adjust as needed
+    # Extra space for small table and padding
+    figure_height = max(8, len(df.index) * 0.4) + 1  
 
     # Create a figure and a set of subplots
     fig, ax = plt.subplots(figsize=(figure_width, figure_height))
-
-    # Create a table and remove the frame
-    table = plt.table(cellText=df.values, colLabels=df.columns, loc='center', cellLoc='center')
-    table.auto_set_font_size(False)
-    table.set_fontsize(10)
-    table.scale(1, 1.5)
     ax.axis('off')
 
-    # Adjust the width of the columns
-    table.auto_set_column_width(col=list(range(len(df.columns))))  # Provide the column indices as a list
+    # Create the small table for the most important numbers
+    important_data = df.iloc[-1, -4:].values.reshape(1, -1)
+    important_cols = df.columns[-4:]
 
-    # Save the figure
-    plt.savefig(f"Results/{filename.split('/')[1].split('.')[0]}Table.png", bbox_inches='tight')
-    
+    # Calculate the height of the small table, adjust as needed
+    small_table_height = 0.05
+    # Position the small table at the top with padding
+    small_table = plt.table(cellText=important_data, colLabels=important_cols, loc='top', cellLoc='center',
+                            bbox=[0, 1 - small_table_height, 1, small_table_height])
+    small_table.auto_set_font_size(False)
+    small_table.set_fontsize(14)
+    small_table.scale(1, 1.5)
+    small_table.auto_set_column_width(col=list(range(len(important_cols))))
+
+    # Calculate the starting bottom position for the main table
+    main_table_bottom = 1 - small_table_height - 0.05  # Subtract small table height and padding
+    # Create the main table below the small table
+    main_table = plt.table(cellText=df.values, colLabels=df.columns, loc='top', cellLoc='center',
+                           bbox=[0, 0, 1, main_table_bottom])
+    main_table.auto_set_font_size(False)
+    main_table.set_fontsize(10)
+    main_table.scale(1, 1.5)
+    main_table.auto_set_column_width(col=list(range(len(df.columns))))
+
+    # Save the figure with minimal padding
+    plt.savefig(f"Results/{filename.split('/')[1].split('.')[0]}Table.png", bbox_inches='tight', pad_inches=0.1)
+
     # Close the figure
     plt.close(fig)
-    
+
 def UpdateResultsText():
     # Clear the text box
     ResultsText.delete('1.0', tk.END)
