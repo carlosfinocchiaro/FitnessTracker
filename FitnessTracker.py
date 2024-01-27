@@ -29,13 +29,13 @@ def CalculateWeightLoss(BodyFatPercent, BodyFatPercentGoal, BodyFatPercentLossPe
     WeeksToGoal = math.ceil(TotalWeightToLose / BodyFatPoundsLossPerWeek)
     
     # Return the results
-    return {'Body Fat In Pounds': [BodyFatInPounds, 'lbs'], 
-            'Lean Body Mass': [LeanBodyMass, 'lbs'], 
-            'Body Fat Percent To Lose': [BodyFatPercentToLose, '%'], 
-            'Total Weight To Lose': [TotalWeightToLose, 'lbs'], 
-            'Target Weight': [TargetWeight, 'lbs'],
-            'Body Fat Pounds Loss Per Week': [BodyFatPoundsLossPerWeek, 'lbs/week'], 
-            'Weeks To Goal': [WeeksToGoal, 'weeks']}
+    return {'Fat lbs': [BodyFatInPounds, 'lbs'], 
+            'Lean lbs': [LeanBodyMass, 'lbs'], 
+            'Fat % to Loose': [BodyFatPercentToLose, '%'], 
+            'Lbs to loose': [TotalWeightToLose, 'lbs'], 
+            'Target lbs': [TargetWeight, 'lbs'],
+            'Fat lbs per week': [BodyFatPoundsLossPerWeek, 'lbs/week'], 
+            'Weeks': [WeeksToGoal, 'weeks']}
     
 def CalculateActivityMultiplier(DaysOfTrainingPerWeek):
     # Nodays of training per week
@@ -83,8 +83,8 @@ def CalculateMaintenanceCalories(Age, Weight, Height, DaysOfTrainingPerWeek, Gen
     # Return the results
     return {'BMI':[bmi,'kg/m^2'],
             'BMR': [BMR, 'calories/day'],
-            'Activity Multiplier': [ActivityMultiplier, 'x'],
-            'Maintenance Calories': [MaintenanceCalories, 'calories/day']}
+            'Multiplier': [ActivityMultiplier, 'x'],
+            'Maintenace cal': [MaintenanceCalories, 'calories/day']}
 
 def CalculateCaloricDeficit(MaintenanceCalories, PoundsToLosePerWeek, ProteinPercentage, CarbsPercentage, FatPercentage):    
     # Calculate the caloric deficit
@@ -99,8 +99,8 @@ def CalculateCaloricDeficit(MaintenanceCalories, PoundsToLosePerWeek, ProteinPer
     FatGrams = math.floor((CaloriesPerDay * (FatPercentage / 100)) / 9)
 
     # Return the results
-    return {'Target Caloric Deficit': [TargetCaloricDeficit, 'calories/day'],
-            'Calories Per Day': [CaloriesPerDay, 'calories/day'],
+    return {'Target deficit': [TargetCaloricDeficit, 'calories/day'],
+            'Calories/Day': [CaloriesPerDay, 'calories/day'],
             'Protein': [ProteinGrams, 'g/day'],
             'Carbs': [CarbsGrams, 'g/day'],
             'Fats': [FatGrams, 'g/day']}
@@ -201,7 +201,7 @@ def UpdateCalculations():
     # Perform calculations
     WeightLoss = CalculateWeightLoss(Entries['Body Fat Percent'][0], Entries['Body Fat Percent Goal'][0], Entries['Body Fat Percent Loss Per Week'][0], Entries['Weight'][0])
     MaintenenceCalories = CalculateMaintenanceCalories(Entries['Age'][0], Entries['Weight'][0], Entries['Height'][0], Entries['Days Of Training Per Week'][0], Entries['Gender'][0])
-    CaloricDeficit = CalculateCaloricDeficit(MaintenenceCalories['Maintenance Calories'][0], WeightLoss['Body Fat Pounds Loss Per Week'][0],Entries['Protein Percent'][0],Entries['Carbs Percent'][0],Entries['Fats Percent'][0]
+    CaloricDeficit = CalculateCaloricDeficit(MaintenenceCalories['Maintenace cal'][0], WeightLoss['Fat lbs per week'][0],Entries['Protein Percent'][0],Entries['Carbs Percent'][0],Entries['Fats Percent'][0]
 )    
     # Create a new dictionary and update it with the other dictionaries
     Data.update(CurrentDate)
@@ -229,7 +229,7 @@ def SaveResults():
     # Check if file exists, if not, create it and write headers
     if not os.path.isfile(FileName):
         with open(FileName, 'w') as file:
-            file.write("Date,Weight,Height,Body Fat Percent,Body Fat Percent To Lose,Body Fat In Pounds,Lean Body Mass,Body Fat Pounds Loss Per Week,Total Weight To Lose,Target Weight,Days Of Training Per Week,Weeks To Goal,BMI,BMR,Activity Multiplier,Maintenance Calories,Target Caloric Deficit,Calories Per Day,Protein,Carbs,Fats\n")
+            file.write("Date,Weight,Height,Body Fat Percent,Fat % to Loose,Fat lbs,Lean lbs,Fat lbs per week,Lbs to loose,Target lbs,Days Of Training Per Week,Weeks,BMI,BMR,Multiplier,Maintenace cal,Target deficit,Calories/Day,Protein,Carbs,Fats\n")
     
     # Write results to the file
     with open(FileName, 'a') as file:
@@ -237,20 +237,20 @@ def SaveResults():
                     f"{Data['Weight'][0]},"
                     f"{Data['Height'][0]},"
                     f"{Data['Body Fat Percent'][0]},"
-                    f"{Data['Body Fat Percent To Lose'][0]},"
-                    f"{Data['Body Fat In Pounds'][0]},"
-                    f"{Data['Lean Body Mass'][0]},"
-                    f"{Data['Body Fat Pounds Loss Per Week'][0]},"
-                    f"{Data['Total Weight To Lose'][0]},"
-                    f"{Data['Target Weight'][0]},"
+                    f"{Data['Fat % to Loose'][0]},"
+                    f"{Data['Fat lbs'][0]},"
+                    f"{Data['Lean lbs'][0]},"
+                    f"{Data['Fat lbs per week'][0]},"
+                    f"{Data['Lbs to loose'][0]},"
+                    f"{Data['Target lbs'][0]},"
                     f"{Data['Days Of Training Per Week'][0]},"
-                    f"{Data['Weeks To Goal'][0]},"
+                    f"{Data['Weeks'][0]},"
                     f"{Data['BMI'][0]},"
                     f"{Data['BMR'][0]},"
-                    f"{Data['Activity Multiplier'][0]},"
-                    f"{Data['Maintenance Calories'][0]},"
-                    f"{Data['Target Caloric Deficit'][0]},"
-                    f"{Data['Calories Per Day'][0]},"
+                    f"{Data['Multiplier'][0]},"
+                    f"{Data['Maintenace cal'][0]},"
+                    f"{Data['Target deficit'][0]},"
+                    f"{Data['Calories/Day'][0]},"
                     f"{Data['Protein'][0]},"
                     f"{Data['Carbs'][0]},"
                     f"{Data['Fats'][0]}\n"))
@@ -262,41 +262,39 @@ def SaveResults():
     messagebox.showinfo("Saved", "Results and table image saved successfully!")
 
 def CreateTableImage(filename):
+    import pandas as pd
+    import matplotlib.pyplot as plt
+
     # Load the CSV data into a pandas DataFrame
     df = pd.read_csv(filename)
 
     # Determine the size of the figure dynamically
-    figure_width = max(24, len(df.columns) * 1.5)  # Adjust as needed
-    # Extra space for small table and padding
-    figure_height = max(8, len(df.index) * 0.4) + 1  
+    figure_width = max(24, len(df.columns) * 2)  # Adjust as needed
+    figure_height = max(8, len(df) * 0.5)  # Adjust as needed
 
     # Create a figure and a set of subplots
     fig, ax = plt.subplots(figsize=(figure_width, figure_height))
     ax.axis('off')
 
-    # Create the small table for the most important numbers
-    important_data = df.iloc[-1, -4:].values.reshape(1, -1)
-    important_cols = df.columns[-4:]
+    # Create the table
+    table = plt.table(cellText=df.values, colLabels=df.columns, loc='center', cellLoc='center')
 
-    # Calculate the height of the small table, adjust as needed
-    small_table_height = 0.05
-    # Position the small table at the top with padding
-    small_table = plt.table(cellText=important_data, colLabels=important_cols, loc='top', cellLoc='center',
-                            bbox=[0, 1 - small_table_height, 1, small_table_height])
-    small_table.auto_set_font_size(False)
-    small_table.set_fontsize(14)
-    small_table.scale(1, 1.5)
-    small_table.auto_set_column_width(col=list(range(len(important_cols))))
+    # Set properties for the table
+    table.auto_set_font_size(False)
+    table.set_fontsize(26)  # Choose a font size that fits your needs
+    table.scale(1, 3)  # Increase row height, adjust scale to fit
 
-    # Calculate the starting bottom position for the main table
-    main_table_bottom = 1 - small_table_height - 0.05  # Subtract small table height and padding
-    # Create the main table below the small table
-    main_table = plt.table(cellText=df.values, colLabels=df.columns, loc='top', cellLoc='center',
-                           bbox=[0, 0, 1, main_table_bottom])
-    main_table.auto_set_font_size(False)
-    main_table.set_fontsize(10)
-    main_table.scale(1, 1.5)
-    main_table.auto_set_column_width(col=list(range(len(df.columns))))
+    table.auto_set_column_width(col=list(range(len(df.columns))))  # Adjust column width automatically
+    
+    # Highlight the last four columns of the last row in yellow
+    last_row_idx = len(df)
+    for col_idx in range(len(df.columns) - 4, len(df.columns)):
+        cell = table[(last_row_idx, col_idx)]
+        cell.set_facecolor('yellow')
+        cell.set_edgecolor('black')
+
+    # Adjust layout
+    plt.tight_layout()
 
     # Save the figure with minimal padding
     plt.savefig(f"Results/{filename.split('/')[1].split('.')[0]}Table.png", bbox_inches='tight', pad_inches=0.1)
@@ -309,10 +307,10 @@ def UpdateResultsText():
     ResultsText.delete('1.0', tk.END)
 
     # Define the order of keys
-    KeysOrder = ['Date', 'Weight', 'Height', 'Body Fat Percent', 'Body Fat Percent To Lose', 'Body Fat In Pounds', 
-                 'Lean Body Mass', 'Body Fat Pounds Loss Per Week', 'Total Weight To Lose', 'Target Weight', 
-                 'Days Of Training Per Week', 'Weeks To Goal', 'BMI', 'BMR', 'Activity Multiplier', 'Maintenance Calories', 
-                 'Target Caloric Deficit', 'Calories Per Day', 'Protein', 'Carbs', 'Fats']
+    KeysOrder = ['Date', 'Weight', 'Height', 'Body Fat Percent', 'Fat % to Loose', 'Fat lbs', 
+                 'Lean lbs', 'Fat lbs per week', 'Lbs to loose', 'Target lbs', 
+                 'Days Of Training Per Week', 'Weeks', 'BMI', 'BMR', 'Multiplier', 'Maintenace cal', 
+                 'Target deficit', 'Calories/Day', 'Protein', 'Carbs', 'Fats']
 
     # Convert all values to strings and append the unit of measure
     StrValues = []
