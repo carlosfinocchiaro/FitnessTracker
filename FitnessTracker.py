@@ -70,6 +70,9 @@ def CalculateMaintenanceCalories(Age, Weight, Height, DaysOfTrainingPerWeek, Gen
         BMR = math.floor(10 * Weight_kg + 6.25 * Height_cm - 5 * Age + 5)
     elif Gender.lower() == 'female':
         BMR = math.floor(10 * Weight_kg + 6.25 * Height_cm - 5 * Age - 161)
+        
+    # Calculate BMI
+    bmi = round(Weight_kg / ((Height_cm / 100) ** 2),1)
     
     # Calculate Activity Multiplier
     ActivityMultiplier = CalculateActivityMultiplier(DaysOfTrainingPerWeek)
@@ -78,7 +81,8 @@ def CalculateMaintenanceCalories(Age, Weight, Height, DaysOfTrainingPerWeek, Gen
     MaintenanceCalories = math.floor(BMR * ActivityMultiplier)
     
     # Return the results
-    return {'BMR': [BMR, 'calories/day'],
+    return {'BMI':[bmi,'kg/m^2'],
+            'BMR': [BMR, 'calories/day'],
             'Activity Multiplier': [ActivityMultiplier, 'x'],
             'Maintenance Calories': [MaintenanceCalories, 'calories/day']}
 
@@ -225,7 +229,7 @@ def SaveResults():
     # Check if file exists, if not, create it and write headers
     if not os.path.isfile(FileName):
         with open(FileName, 'w') as file:
-            file.write("Date,Weight,Height,Body Fat Percent,Body Fat Percent To Lose,Body Fat In Pounds,Lean Body Mass,Body Fat Pounds Loss Per Week,Total Weight To Lose,Target Weight,Days Of Training Per Week,Weeks To Goal,BMR,Activity Multiplier,Maintenance Calories,Target Caloric Deficit,Calories Per Day,Protein,Carbs,Fats\n")
+            file.write("Date,Weight,Height,Body Fat Percent,Body Fat Percent To Lose,Body Fat In Pounds,Lean Body Mass,Body Fat Pounds Loss Per Week,Total Weight To Lose,Target Weight,Days Of Training Per Week,Weeks To Goal,BMI,BMR,Activity Multiplier,Maintenance Calories,Target Caloric Deficit,Calories Per Day,Protein,Carbs,Fats\n")
     
     # Write results to the file
     with open(FileName, 'a') as file:
@@ -241,6 +245,7 @@ def SaveResults():
                     f"{Data['Target Weight'][0]},"
                     f"{Data['Days Of Training Per Week'][0]},"
                     f"{Data['Weeks To Goal'][0]},"
+                    f"{Data['BMI'][0]},"
                     f"{Data['BMR'][0]},"
                     f"{Data['Activity Multiplier'][0]},"
                     f"{Data['Maintenance Calories'][0]},"
@@ -290,7 +295,7 @@ def UpdateResultsText():
     # Define the order of keys
     KeysOrder = ['Date', 'Weight', 'Height', 'Body Fat Percent', 'Body Fat Percent To Lose', 'Body Fat In Pounds', 
                  'Lean Body Mass', 'Body Fat Pounds Loss Per Week', 'Total Weight To Lose', 'Target Weight', 
-                 'Days Of Training Per Week', 'Weeks To Goal', 'BMR', 'Activity Multiplier', 'Maintenance Calories', 
+                 'Days Of Training Per Week', 'Weeks To Goal', 'BMI', 'BMR', 'Activity Multiplier', 'Maintenance Calories', 
                  'Target Caloric Deficit', 'Calories Per Day', 'Protein', 'Carbs', 'Fats']
 
     # Convert all values to strings and append the unit of measure
@@ -401,7 +406,7 @@ FatsPercentEntry.trace_add('write', lambda *args: AddPercent(*args, var=FatsPerc
 tk.Button(ButtonsFrame, text="Calculate", command=UpdateCalculations, font=Font).pack(side=tk.LEFT, padx=10)
 tk.Button(ButtonsFrame, text="Save Results", command=SaveResults, font=Font).pack(side=tk.LEFT, padx=10)
 
-ResultsText = tk.Text(ResultsFrame, font=Font, width=55, height=20)
+ResultsText = tk.Text(ResultsFrame, font=Font, width=55, height=21)
 ResultsText.grid(row=0, column=0,sticky='we')
 
 # UI Callbacks
