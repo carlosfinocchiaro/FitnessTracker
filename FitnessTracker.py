@@ -529,11 +529,11 @@ WeightEntry = tk.StringVar()
 HeightEntry = tk.StringVar()
 DaysOfTrainingEntry = tk.StringVar()
 BodyFatPercentEntry = tk.StringVar()
-BodyFatPercentGoalEntry = tk.StringVar(value="12%")
-BodyFatPercentLossPerWeekEntry = tk.StringVar(value="1%")
-ProteinPercentEntry = tk.StringVar(value="45%")
-CarbsPercentEntry = tk.StringVar(value="35%")
-FatsPercentEntry = tk.StringVar(value="20%")
+BodyFatPercentGoalEntry = tk.StringVar()
+BodyFatPercentLossPerWeekEntry = tk.StringVar()
+ProteinPercentEntry = tk.StringVar()
+CarbsPercentEntry = tk.StringVar()
+FatsPercentEntry = tk.StringVar()
 ResultsText = tk.StringVar()
 
 # Frames
@@ -611,7 +611,7 @@ FoodFatsVar = tk.StringVar()
 
 # Food Entry Frame
 FoodEntryFrame = tk.Frame(FoodsFrame, padx=10, pady=10)
-FoodEntryFrame.grid(row=0, column=0, sticky="ew")
+FoodEntryFrame.grid(row=0, column=0, sticky="new")
 
 # Food Entry Widgets
 tk.Label(FoodEntryFrame, text="Food Name", font=Font2).grid(row=0, column=0, sticky="w")
@@ -641,11 +641,22 @@ tk.Button(FoodEntryFrame, text="Remove Selected", command=remove_selected_food, 
 
 # Food Table
 food_table = ttk.Treeview(FoodsFrame, columns=("name", "unit", "measurement", "calories", "protein", "carbs", "fats"), show='headings')
-food_table.grid(row=1, column=0, sticky='nsew')
+food_table.grid(row=0, column=1, sticky='nsew')
 
 # Configure row tags
 food_table.tag_configure('evenrow', background='#FFFFFF')  # White
 food_table.tag_configure('oddrow', background='#E8E8E8')   # Light Grey
+
+# Creating a scrollbar
+scrollbar = ttk.Scrollbar(FoodsFrame, orient="vertical", command=food_table.yview)
+scrollbar.grid(row=0, column=1, sticky='ens')
+
+# Configure grid to expand the cell where the table is located
+FoodsFrame.grid_rowconfigure(0, weight=1)
+FoodsFrame.grid_columnconfigure(1, weight=1)
+
+# Configuring the food_table to use the scrollbar
+food_table.configure(yscrollcommand=scrollbar.set)
 
 
 # Define headings
