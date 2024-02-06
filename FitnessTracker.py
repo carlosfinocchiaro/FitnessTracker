@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import ttk
 from tkinter import messagebox
 import datetime
 import os
@@ -344,6 +345,20 @@ Data = {}
 root = tk.Tk()
 root.title("FitnessTracker - By Carlos Finocchiaro")
 
+# Create Notebook
+notebook = ttk.Notebook(root)
+notebook.pack(expand=True, fill="both")
+
+# Create Frames for each tab
+CalculatorFrame = ttk.Frame(notebook)
+MacrosFrame = ttk.Frame(notebook)
+FoodsFrame = ttk.Frame(notebook)
+
+# Add Frames to notebook as tabs
+notebook.add(CalculatorFrame, text="Calculator")
+notebook.add(MacrosFrame, text="Macros")
+notebook.add(FoodsFrame, text="Foods")
+
 # Variables
 NameEntry = tk.StringVar()
 GenderVar = tk.StringVar()
@@ -360,13 +375,13 @@ FatsPercentEntry = tk.StringVar(value="20%")
 ResultsText = tk.StringVar()
 
 # Frames
-InputFrame = tk.Frame(root, padx=10, pady=10)
+InputFrame = tk.Frame(CalculatorFrame, padx=10, pady=10)
 InputFrame.grid(row=0, column=0, sticky="ew")
 
 ButtonsFrame = tk.Frame(InputFrame, padx=10, pady=10)
 ButtonsFrame.grid(row=12, column=1, pady=20)
 
-ResultsFrame = tk.Frame(root, padx=20, pady=20)
+ResultsFrame = tk.Frame(CalculatorFrame, padx=20, pady=20)
 ResultsFrame.grid(row=0, column=1, sticky='ew')
 
 # Input Widgets
