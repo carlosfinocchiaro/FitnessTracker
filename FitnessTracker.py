@@ -735,6 +735,11 @@ CalculatorFrame = ttk.Frame(notebook)
 MacrosFrame = ttk.Frame(notebook)
 FoodsFrame = ttk.Frame(notebook)
 
+# Configure grid to expand the cell where the table is located
+MacrosFrame.grid_rowconfigure(1, weight=1)
+MacrosFrame.grid_columnconfigure(0, weight=1)
+
+
 # Add Frames to notebook as tabs
 notebook.add(CalculatorFrame, text="Calculator")
 notebook.add(MacrosFrame, text="Macros", state='disabled')
@@ -817,7 +822,12 @@ tk.Button(ButtonsFrame, text="Calculate", command=UpdateCalculations, font=Font)
 tk.Button(ButtonsFrame, text="Save Results", command=SaveResults, font=Font).pack(side=tk.LEFT, padx=10)
 
 ResultsText = tk.Text(ResultsFrame, font=Font, width=55, height=21)
-ResultsText.grid(row=0, column=0,sticky='we')
+ResultsText.grid(row=0, column=0,sticky='nsew')
+
+# Configure grid to expand the cell where the ResultsText is located
+ResultsFrame.grid_rowconfigure(0, weight=1)
+ResultsFrame.grid_columnconfigure(0, weight=1)
+
 
 # Variables for food entry
 FoodNameVar = tk.StringVar()
@@ -848,10 +858,10 @@ tk.Entry(FoodEntryFrame, textvariable=FoodCaloriesVar, font=Font).grid(row=3, co
 tk.Label(FoodEntryFrame, text="Protein (g)", font=Font2).grid(row=4, column=0, sticky="w")
 tk.Entry(FoodEntryFrame, textvariable=FoodProteinVar, font=Font).grid(row=4, column=1, sticky="ew")
 
-tk.Label(FoodEntryFrame, text="Carbs (g)", font=Font2).grid(row=5, column=0, sticky="w")
+tk.Label(FoodEntryFrame, text="Carbs   (g)", font=Font2).grid(row=5, column=0, sticky="w")
 tk.Entry(FoodEntryFrame, textvariable=FoodCarbsVar, font=Font).grid(row=5, column=1, sticky="ew")
 
-tk.Label(FoodEntryFrame, text="Fats (g)", font=Font2).grid(row=6, column=0, sticky="w")
+tk.Label(FoodEntryFrame, text="Fats    (g)", font=Font2).grid(row=6, column=0, sticky="w")
 tk.Entry(FoodEntryFrame, textvariable=FoodFatsVar, font=Font).grid(row=6, column=1, sticky="ew")
 
 # Add and Remove Buttons
@@ -897,6 +907,11 @@ food_table.column("fats", width=80, anchor='center')
 # User Input Fields
 MacrosInputFrame = tk.Frame(MacrosFrame, padx=10, pady=10)
 MacrosInputFrame.grid(row=0, column=0, sticky="ew")
+
+# Configure the grid for the summary table
+MacrosInputFrame.grid_rowconfigure(0, weight=1)
+MacrosInputFrame.grid_columnconfigure(2, weight=1)
+
 
 tk.Label(MacrosInputFrame, text="Time", font=Font2).grid(row=0, column=0, sticky="w")
 TimeVar = tk.StringVar()
@@ -973,12 +988,16 @@ macros_table.configure(yscrollcommand=macros_scrollbar.set)
 
 # Create the summary table
 summary_table = ttk.Treeview(MacrosInputFrame, columns=("Category", "Calories", "Proteins (g)", "Proteins (%)", "Carbs (g)", "Carbs (%)", "Fats (g)", "Fats (%)"), show='headings')
-summary_table.grid(row=0, column=3, sticky='nsew',rowspan=8, padx=20, pady=10)
+summary_table.grid(row=0, column=2, sticky='nsew',rowspan=9, padx=20)
 
-# Customize the headers
+# Customize the headers and adjust column widths
 for col in summary_table['columns']:
     summary_table.heading(col, text=col.replace("_", " ").capitalize())
-    summary_table.column(col, anchor='center')
+    if col in ["Category", "Proteins (%)", "Carbs (%)", "Fats (%)"]:
+        summary_table.column(col, width=90, anchor='center')  # Narrower columns
+    else:
+        summary_table.column(col, width=110, anchor='center')  # Wider columns
+
 
 # Configure row tags for coloring and bold text
 summary_table.tag_configure('target_row', background='#D3D3D3')   # Grey
@@ -992,18 +1011,10 @@ for row_name in ["Target", "Actuals", "Left"]:
     row_id = summary_table.insert('', 'end', values=(row_name, 0, 0, 0, 0, 0, 0, 0))
     summary_row_ids[row_name] = row_id  # Store the row ID
 
-
 # Applying custom tags for each row
 summary_table.item(summary_row_ids['Target'], tags=('target_row', 'bold_text'))
 summary_table.item(summary_row_ids['Actuals'], tags=('actuals_row', 'bold_text'))
 summary_table.item(summary_row_ids['Left'], tags=('left_row', 'bold_text'))
-
-
-
-
-
-
-
 
 # Check for existing data before starting the main loop
 root.after(1000, initialize)
