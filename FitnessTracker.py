@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
+from tkinter import filedialog
 import datetime
 import os
 import math
@@ -221,7 +222,7 @@ def SaveResults():
         return
     
     # Preparing data to be saved
-    FileName = f"Results/{Data['Name'][0]}.csv"
+    FileName = f"Results/{Data['Name'][0]}-Calculation.csv"
     
     # Check if 'Results' directory exists, if not, create it
     if not os.path.exists('Results'):
@@ -230,21 +231,57 @@ def SaveResults():
     # Check if file exists, if not, create it and write headers
     if not os.path.isfile(FileName):
         with open(FileName, 'w') as file:
-            file.write("Date,Weight,Height,Body Fat Percent,Fat % to Loose,Fat lbs,Lean lbs,Fat lbs per week,Lbs to loose,Target lbs,Days Of Training Per Week,Weeks,BMI,BMR,Multiplier,Maintenace cal,Target deficit,Calories/Day,Protein,Carbs,Fats\n")
+            file.write("Date,"
+                        "Name,"
+                        "Gender,"
+                        "Age,"
+                        "Weight,"
+                        "Height,"
+                        "Days Of Training Per Week,"
+                        "Body Fat Percent,"
+                        "Body Fat Percent Goal,"
+                        "Body Fat Percent Loss Per Week,"
+                        "Protein Percent,"
+                        "Carbs Percent,"
+                        "Fats Percent,"
+                        "Fat Percent to Loose,"
+                        "Fat lbs,"
+                        "Lean lbs,"
+                        "Fat lbs per week,"
+                        "Lbs to loose,"
+                        "Target lbs,"
+                        "Weeks,"
+                        "BMI,"
+                        "BMR,"
+                        "Multiplier,"
+                        "Maintenace cal,"
+                        "Target deficit,"
+                        "Calories/Day,"
+                        "Protein,"
+                        "Carbs,"
+                        "Fats\n")
     
     # Write results to the file
     with open(FileName, 'a') as file:
         file.write((f"{Data['Date'][0]},"
+                    f"{Data['Name'][0]},"
+                    f"{Data['Gender'][0]},"
+                    f"{Data['Age'][0]},"
                     f"{Data['Weight'][0]},"
                     f"{Data['Height'][0]},"
+                    f"{Data['Days Of Training Per Week'][0]},"
                     f"{Data['Body Fat Percent'][0]},"
+                    f"{Data['Body Fat Percent Goal'][0]},"
+                    f"{Data['Body Fat Percent Loss Per Week'][0]},"
+                    f"{Data['Protein Percent'][0]},"
+                    f"{Data['Carbs Percent'][0]},"
+                    f"{Data['Fats Percent'][0]},"
                     f"{Data['Fat % to Loose'][0]},"
                     f"{Data['Fat lbs'][0]},"
                     f"{Data['Lean lbs'][0]},"
                     f"{Data['Fat lbs per week'][0]},"
                     f"{Data['Lbs to loose'][0]},"
                     f"{Data['Target lbs'][0]},"
-                    f"{Data['Days Of Training Per Week'][0]},"
                     f"{Data['Weeks'][0]},"
                     f"{Data['BMI'][0]},"
                     f"{Data['BMR'][0]},"
@@ -261,13 +298,41 @@ def SaveResults():
 
     # Show message box
     messagebox.showinfo("Saved", "Results and table image saved successfully!")
+    
+def CheckExistingData():
+    # Check if 'Results' directory exists and has files
+    if os.path.exists('Results') and os.listdir('Results'):
+        response = messagebox.askyesno("Open File", "Existing data files found. Do you want to open an existing file?")
+        if response:
+            # Open file dialog to select a file
+            file_path = filedialog.askopenfilename(initialdir='Results', title='Select file', filetypes=[("CSV files", "*-Calculation.csv")])
+            if file_path:
+                # Read the CSV file
+                df = pd.read_csv(file_path)
 
-def CreateTableImage(filename):
-    import pandas as pd
-    import matplotlib.pyplot as plt
+                # Check if the DataFrame is not empty
+                if not df.empty:
+                    # Extract the last row
+                    last_row = df.iloc[-1]
 
+                    # Update the UI fields
+                    NameEntry.set(last_row['Name'])
+                    GenderVar.set(last_row['Gender'])
+                    AgeEntry.set(str(last_row['Age']))
+                    WeightEntry.set(str(last_row['Weight']))
+                    HeightEntry.set(str(last_row['Height']))
+                    DaysOfTrainingEntry.set(str(last_row['Days Of Training Per Week']))
+                    BodyFatPercentEntry.set(f"{last_row['Body Fat Percent']}%")
+                    BodyFatPercentGoalEntry.set(f"{last_row['Body Fat Percent Goal']}%")
+                    BodyFatPercentLossPerWeekEntry.set(f"{last_row['Body Fat Percent Loss Per Week']}%")
+                    ProteinPercentEntry.set(f"{last_row['Protein Percent']}%")
+                    CarbsPercentEntry.set(f"{last_row['Carbs Percent']}%")
+                    FatsPercentEntry.set(f"{last_row['Fats Percent']}%")
+
+
+def CreateTableImage(CalculationFile):
     # Load the CSV data into a pandas DataFrame
-    df = pd.read_csv(filename)
+    df = pd.read_csv(CalculationFile)
 
     # Determine the size of the figure dynamically
     figure_width = max(24, len(df.columns) * 2)  # Adjust as needed
@@ -296,9 +361,12 @@ def CreateTableImage(filename):
 
     # Adjust layout
     plt.tight_layout()
+    
+    # Preparing data to be saved
+    FileName = f"Results/{Data['Name'][0]}-Calculation.pdf"
 
     # Save the figure with minimal padding
-    plt.savefig(f"Results/{filename.split('/')[1].split('.')[0]}Table.png", bbox_inches='tight', pad_inches=0.1)
+    plt.savefig(FileName, bbox_inches='tight', pad_inches=0.1)
 
     # Close the figure
     plt.close(fig)
@@ -437,6 +505,9 @@ tk.Button(ButtonsFrame, text="Save Results", command=SaveResults, font=Font).pac
 
 ResultsText = tk.Text(ResultsFrame, font=Font, width=55, height=21)
 ResultsText.grid(row=0, column=0,sticky='we')
+
+# Check for existing data before starting the main loop
+CheckExistingData()
 
 # UI Callbacks
 if __name__ == "__main__":
