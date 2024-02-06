@@ -344,6 +344,7 @@ def CheckExistingData():
                 foods_file = file_path.replace('Calculation.csv', 'Foods.csv')
                 if os.path.isfile(foods_file):
                     load_and_populate_foods(foods_file)
+                    update_food_type_entry()
 
 def load_and_populate_foods(file_path):
     df = pd.read_csv(file_path)
@@ -483,6 +484,7 @@ def add_food():
     sort_table()
     save_table_to_csv()
     alternate_row_colors()
+    update_food_type_entry()
 
 
 def remove_selected_food():
@@ -492,6 +494,7 @@ def remove_selected_food():
         sort_table()
         save_table_to_csv()
         alternate_row_colors()
+        update_food_type_entry()
         
 def alternate_row_colors():
     for index, item in enumerate(food_table.get_children()):
@@ -499,6 +502,90 @@ def alternate_row_colors():
             food_table.item(item, tags=('evenrow',))
         else:
             food_table.item(item, tags=('oddrow',))
+            
+def update_food_type_entry():
+    food_names = [food_table.item(item_id)['values'][0] for item_id in food_table.get_children()]
+    FoodTypeEntry['values'] = food_names
+    
+def add_to_macros():
+    time = TimeVar.get()
+    food_name = FoodTypeVar.get()
+    quantity = QuantityVar.get()
+
+    if not all([time, food_name, quantity]):
+        messagebox.showwarning("Warning", "Please fill in all fields")
+        return
+
+    # Find the selected food in the Foods table
+    for item_id in food_table.get_children():
+        if food_table.item(item_id)['values'][0] == food_name:
+            food_data = food_table.item(item_id)['values']
+            break
+    else:
+        messagebox.showerror("Error", "Selected food not found in Foods table")
+        return
+
+    try:
+        quantity = float(quantity)  # Convert quantity to a number
+    except ValueError:
+        messagebox.showerror("Error", "Invalid quantity")
+        return
+
+    # Calculate nutritional values
+    measurement, calories, protein, carbs, fats = food_data[2:]  # Skip name and unit columns
+    calories = (float(calories) * quantity) / float(measurement)
+    protein = (float(protein) * quantity) / float(measurement)
+    carbs = (float(carbs) * quantity) / float(measurement)
+    fats = (float(fats) * quantity) / float(measurement)
+
+    # Add data to macros table (including the unit)
+    unit = food_data[1]  # Get the unit from the selected food
+    macros_table.insert('', 'end', values=(time, food_name, unit, quantity, calories, protein, carbs, fats), tags=('evenrow', 'oddrow')[(len(macros_table.get_children()) % 2)])
+    
+def on_food_select(event):
+    # Get the selected food name
+    food_name = FoodTypeVar.get()
+
+    # Find the unit for the selected food
+    for item_id in food_table.get_children():
+        if food_table.item(item_id)['values'][0] == food_name:
+            unit = food_table.item(item_id)['values'][1]
+            UnitLabel.config(text=f"{unit}")
+            break
+    else:
+        UnitLabel.config(text="Unit: -")
+
+def update_nutritional_preview(*args):
+    food_name = FoodTypeVar.get()
+    quantity = QuantityVar.get()
+
+    if not food_name or not quantity:
+        return  # Exit if food is not selected or quantity is empty
+
+    try:
+        quantity = float(quantity)
+    except ValueError:
+        return  # Exit if quantity is not a number
+
+    # Find the selected food in the Foods table
+    for item_id in food_table.get_children():
+        if food_table.item(item_id)['values'][0] == food_name:
+            measurement, calories, protein, carbs, fats = food_table.item(item_id)['values'][2:]
+            break
+    else:
+        return  # Exit if selected food not found
+
+    # Calculate nutritional values
+    calories = (float(calories) * quantity) / float(measurement)
+    protein = (float(protein) * quantity) / float(measurement)
+    carbs = (float(carbs) * quantity) / float(measurement)
+    fats = (float(fats) * quantity) / float(measurement)
+
+    # Update the preview labels
+    PreviewCaloriesVar.set(f"Calories: {calories:.2f}")
+    PreviewProteinVar.set(f"Protein: {protein:.2f}g")
+    PreviewCarbsVar.set(f"Carbs: {carbs:.2f}g")
+    PreviewFatsVar.set(f"Fats: {fats:.2f}g")
         
 # Variables
 Data = {}
@@ -672,6 +759,81 @@ food_table.column("protein", width=80, anchor='center')
 food_table.column("carbs", width=80, anchor='center')
 food_table.column("fats", width=80, anchor='center')
 
+
+
+# Macros Functions
+# User Input Fields
+MacrosInputFrame = tk.Frame(MacrosFrame, padx=10, pady=10)
+MacrosInputFrame.grid(row=0, column=0, sticky="ew")
+
+tk.Label(MacrosInputFrame, text="Time", font=Font2).grid(row=0, column=0, sticky="w")
+TimeVar = tk.StringVar()
+TimeEntry = ttk.Combobox(MacrosInputFrame, textvariable=TimeVar, values=["Breakfast", "Morning Snack", "Lunch", "Afternoon Snack", "Dinner", "Evening Snack", "Other"], font=Font)
+TimeEntry.grid(row=0, column=1, sticky="ew")
+
+tk.Label(MacrosInputFrame, text="Food", font=Font2).grid(row=1, column=0, sticky="w")
+FoodTypeVar = tk.StringVar()
+FoodTypeEntry = ttk.Combobox(MacrosInputFrame, textvariable=FoodTypeVar, font=Font)
+FoodTypeEntry.grid(row=1, column=1, sticky="ew")
+
+tk.Label(MacrosInputFrame, text="Quantity", font=Font2).grid(row=2, column=0, sticky="w")
+QuantityVar = tk.StringVar()
+QuantityEntry = tk.Entry(MacrosInputFrame, textvariable=QuantityVar, font=Font)
+QuantityEntry.grid(row=2, column=1, sticky="ew")
+
+# Add a label to display the unit of measurement
+UnitLabel = tk.Label(MacrosInputFrame, font=Font2)
+UnitLabel.grid(row=2, column=2, sticky="w")
+
+FoodTypeEntry.bind('<<ComboboxSelected>>', on_food_select)
+
+# Preview Frame and Labels
+#PreviewFrame = tk.Frame(MacrosFrame, padx=10, pady=10)
+#PreviewFrame.grid(row=2, column=0, sticky="ew")
+
+PreviewCaloriesVar = tk.StringVar(value="Calories: ")
+PreviewProteinVar = tk.StringVar(value="Protein: ")
+PreviewCarbsVar = tk.StringVar(value="Carbs: ")
+PreviewFatsVar = tk.StringVar(value="Fats: ")
+
+tk.Label(MacrosInputFrame, textvariable=PreviewCaloriesVar, font=Font2).grid(row=3, column=0,columnspan=2, sticky="w")
+tk.Label(MacrosInputFrame, textvariable=PreviewProteinVar, font=Font2).grid(row=4, column=0,columnspan=2, sticky="w")
+tk.Label(MacrosInputFrame, textvariable=PreviewCarbsVar, font=Font2).grid(row=5, column=0,columnspan=2, sticky="w")
+tk.Label(MacrosInputFrame, textvariable=PreviewFatsVar, font=Font2).grid(row=6, column=0,columnspan=2, sticky="w")
+
+# Bind the update function to the quantity variable
+QuantityVar.trace_add("write", update_nutritional_preview)
+
+
+# Add Button
+tk.Button(MacrosInputFrame, text="Add", command=add_to_macros, font=Font).grid(row=7, column=0, columnspan=2, pady=10)
+
+# Macros Table
+macros_table = ttk.Treeview(MacrosFrame, columns=("time", "food", "unit", "quantity", "calories", "protein", "carbs", "fats"), show='headings')
+macros_table.grid(row=1, column=0, sticky='nsew')
+
+# Define headings
+for col in macros_table['columns']:
+    macros_table.heading(col, text=col.capitalize())
+
+# Adjust column alignments
+macros_table.column("time", width=100, anchor='w')
+macros_table.column("food", width=120, anchor='center')
+macros_table.column("unit", width=80, anchor='center')
+macros_table.column("quantity", width=80, anchor='center')
+macros_table.column("calories", width=80, anchor='center')
+macros_table.column("protein", width=80, anchor='center')
+macros_table.column("carbs", width=80, anchor='center')
+macros_table.column("fats", width=80, anchor='center')
+
+# Configure row tags for alternate row colors
+macros_table.tag_configure('evenrow', background='#FFFFFF')  # White
+macros_table.tag_configure('oddrow', background='#E8E8E8')   # Light Grey
+
+# Creating a vertical scrollbar for the Macros table
+macros_scrollbar = ttk.Scrollbar(MacrosFrame, orient="vertical", command=macros_table.yview)
+macros_scrollbar.grid(row=1, column=1, sticky='ns')
+macros_table.configure(yscrollcommand=macros_scrollbar.set)
 
 # Check for existing data before starting the main loop
 root.after(1000, CheckExistingData)
