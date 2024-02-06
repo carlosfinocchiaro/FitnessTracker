@@ -2,11 +2,13 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 from tkinter import filedialog
+import tkinter.font as tkFont
 import datetime
 import os
 import math
 import pandas as pd
 import matplotlib.pyplot as plt
+import time
 
 def CalculateWeightLoss(BodyFatPercent, BodyFatPercentGoal, BodyFatPercentLossPerWeek, Weight):
     # Calculate body fat in pounds
@@ -345,12 +347,22 @@ def CheckExistingData():
                 if os.path.isfile(foods_file):
                     load_and_populate_foods(foods_file)
                     update_food_type_entry()
+                    
+                # Load and Populate Macros Data
+                macros_file = file_path.replace('Calculation.csv', 'Macros.csv')
+                if os.path.isfile(macros_file):
+                    load_and_populate_macros(macros_file)
 
 def load_and_populate_foods(file_path):
     df = pd.read_csv(file_path)
     for _, row in df.iterrows():
         food_table.insert('', 'end', values=list(row))
     alternate_row_colors()
+    
+def load_and_populate_macros(file_path):
+    df = pd.read_csv(file_path)
+    for _, row in df.iterrows():
+        macros_table.insert('', 'end', values=list(row))
         
 def CreateTableImage(CalculationFile):
     # Load the CSV data into a pandas DataFrame
@@ -435,7 +447,7 @@ def save_table_to_csv():
         data_to_save.append(food_table.item(item)['values'])
     
     # Convert the list to a DataFrame and save as CSV
-    df = pd.DataFrame(data_to_save, columns=["name", "unit", "measurement", "calories", "protein", "carbs", "fats"])
+    df = pd.DataFrame(data_to_save, columns=["name", "unit", "quantity", "calories", "protein", "carbs", "fats"])
     
     # Preparing data to be saved
     FileName = f"Results/{Data['Name'][0]}-Foods.csv"
@@ -474,7 +486,7 @@ def add_food():
     food_data = {
         "name": food_name,
         "unit": food_unit,
-        "measurement": food_measurement,
+        "quantity": food_measurement,
         "calories": food_calories,
         "protein": food_protein,
         "carbs": food_carbs,
@@ -541,6 +553,8 @@ def add_to_macros():
     # Add data to macros table (including the unit)
     unit = food_data[1]  # Get the unit from the selected food
     macros_table.insert('', 'end', values=(time, food_name, unit, quantity, calories, protein, carbs, fats), tags=('evenrow', 'oddrow')[(len(macros_table.get_children()) % 2)])
+    update_summary_table()
+    save_macros_to_csv()
     
 def on_food_select(event):
     # Get the selected food name
@@ -554,6 +568,7 @@ def on_food_select(event):
             break
     else:
         UnitLabel.config(text="Unit: -")
+    update_nutritional_preview()
 
 def update_nutritional_preview(*args):
     food_name = FoodTypeVar.get()
@@ -582,11 +597,128 @@ def update_nutritional_preview(*args):
     fats = (float(fats) * quantity) / float(measurement)
 
     # Update the preview labels
-    PreviewCaloriesVar.set(f"Calories: {calories:.2f}")
-    PreviewProteinVar.set(f"Protein: {protein:.2f}g")
-    PreviewCarbsVar.set(f"Carbs: {carbs:.2f}g")
-    PreviewFatsVar.set(f"Fats: {fats:.2f}g")
+    PreviewCaloriesVar.set(f"Calories  {calories:.2f}g")
+    PreviewProteinVar.set(f"Protein   {protein:.2f}g")
+    PreviewCarbsVar.set(f"Carbs     {carbs:.2f}g")
+    PreviewFatsVar.set(f"Fats      {fats:.2f}g")
         
+def delete_selected_from_macros():
+    selected_item = macros_table.selection()
+    if selected_item:
+        macros_table.delete(selected_item)
+    else:
+        messagebox.showwarning("Warning", "No item selected")
+    update_summary_table()
+    save_macros_to_csv()
+        
+def get_target_values():
+    targets = {
+        'Calories': Data.get('Calories/Day', [0])[0],
+        'Proteins (g)': Data.get('Protein', [0])[0],
+        'Carbs (g)': Data.get('Carbs', [0])[0],
+        'Fats (g)': Data.get('Fats', [0])[0]
+    }
+    return targets
+
+def calculate_actuals():
+    actuals = {'Calories': 0, 'Proteins (g)': 0, 'Carbs (g)': 0, 'Fats (g)': 0}
+    for item in macros_table.get_children():
+        values = macros_table.item(item, 'values')
+        actuals['Calories'] += float(values[4])
+        actuals['Proteins (g)'] += float(values[5])
+        actuals['Carbs (g)'] += float(values[6])
+        actuals['Fats (g)'] += float(values[7])
+    return actuals
+
+def calculate_left(target, actuals):
+    left = {
+        'Calories': target['Calories'] - actuals['Calories'],
+        'Proteins (g)': target['Proteins (g)'] - actuals['Proteins (g)'],
+        'Carbs (g)': target['Carbs (g)'] - actuals['Carbs (g)'],
+        'Fats (g)': target['Fats (g)'] - actuals['Fats (g)']
+    }
+    return left
+
+def update_summary_table():
+    targets = get_target_values()
+    actuals = calculate_actuals()
+    left = calculate_left(targets, actuals)
+
+    # Non-local variable to store the total grams
+    total_grams = 0
+
+    # Function to calculate percentages
+    def calculate_percentages(row_name, values):
+        nonlocal total_grams
+        protein = values['Proteins (g)'] * 4
+        carbs = values['Carbs (g)'] * 4
+        fats = values['Fats (g)'] * 9
+
+        if row_name == "Target":
+            total_grams = protein + carbs + fats
+
+        if total_grams > 0:
+            protein_percentage = 100 * protein / total_grams
+            carbs_percentage = 100 * carbs / total_grams
+            fats_percentage = 100 * fats / total_grams
+        else:
+            protein_percentage, carbs_percentage, fats_percentage = 0, 0, 0
+
+        # Rounding the percentages to one decimal place
+        protein_percentage = round(protein_percentage, 1)
+        carbs_percentage = round(carbs_percentage, 1)
+        fats_percentage = round(fats_percentage, 1)
+
+        return protein_percentage, carbs_percentage, fats_percentage
+
+    # Update each row in the summary table
+    for row_name, values in [("Target", targets), ("Actuals", actuals), ("Left", left)]:
+        protein_percentage, carbs_percentage, fats_percentage = calculate_percentages(row_name, values)
+        summary_table.item(summary_row_ids[row_name], values=(
+            row_name,
+            values['Calories'],
+            values['Proteins (g)'],
+            protein_percentage,
+            values['Carbs (g)'],
+            carbs_percentage,
+            values['Fats (g)'],
+            fats_percentage
+        ))
+
+    # Applying custom tags for each row
+    summary_table.item(summary_row_ids['Target'], tags=('target_row', 'bold_text'))
+    summary_table.item(summary_row_ids['Actuals'], tags=('actuals_row', 'bold_text'))
+    summary_table.item(summary_row_ids['Left'], tags=('left_row', 'bold_text'))
+
+
+
+
+def initialize():
+    CheckExistingData()
+    time.sleep(0.1)
+    update_summary_table()
+
+
+def save_macros_to_csv():
+    # Create a list to hold the data
+    data_to_save = []
+    for item in macros_table.get_children():
+        data_to_save.append(macros_table.item(item)['values'])
+    
+    # Convert the list to a DataFrame and save as CSV
+    df = pd.DataFrame(data_to_save, columns=["Time", "Food", "Unit", "Quantity", "Calories", "Protein", "Carbs", "Fats"])
+    
+    # Preparing data to be saved
+    FileName = f"Results/{Data['Name'][0]}-Macros.csv"
+    df.to_csv(FileName, index=False)
+    
+def on_tab_selected(event):
+    selected_tab = event.widget.select()
+    selected_tab_name = event.widget.tab(selected_tab, "text")
+    if selected_tab_name == "Macros":
+        update_summary_table()
+
+
 # Variables
 Data = {}
 
@@ -707,7 +839,7 @@ tk.Entry(FoodEntryFrame, textvariable=FoodNameVar, font=Font).grid(row=0, column
 tk.Label(FoodEntryFrame, text="Unit", font=Font2).grid(row=1, column=0, sticky="w")
 tk.Entry(FoodEntryFrame, textvariable=FoodUnitVar, font=Font).grid(row=1, column=1, sticky="ew")
 
-tk.Label(FoodEntryFrame, text="Measurement", font=Font2).grid(row=2, column=0, sticky="w")
+tk.Label(FoodEntryFrame, text="Quantity", font=Font2).grid(row=2, column=0, sticky="w")
 tk.Entry(FoodEntryFrame, textvariable=FoodMeasurementVar, font=Font).grid(row=2, column=1, sticky="ew")
 
 tk.Label(FoodEntryFrame, text="Calories", font=Font2).grid(row=3, column=0, sticky="w")
@@ -727,7 +859,7 @@ tk.Button(FoodEntryFrame, text="Add Food", command=add_food, font=Font).grid(row
 tk.Button(FoodEntryFrame, text="Remove Selected", command=remove_selected_food, font=Font).grid(row=7, column=1, padx=10, pady=10)
 
 # Food Table
-food_table = ttk.Treeview(FoodsFrame, columns=("name", "unit", "measurement", "calories", "protein", "carbs", "fats"), show='headings')
+food_table = ttk.Treeview(FoodsFrame, columns=("name", "unit", "quantity", "calories", "protein", "carbs", "fats"), show='headings')
 food_table.grid(row=0, column=1, sticky='nsew')
 
 # Configure row tags
@@ -753,7 +885,7 @@ for col in food_table['columns']:
 # Adjust column alignments
 food_table.column("name", width=120, anchor='w')
 food_table.column("unit", width=80, anchor='center')
-food_table.column("measurement", width=80, anchor='center')
+food_table.column("quantity", width=80, anchor='center')
 food_table.column("calories", width=80, anchor='center')
 food_table.column("protein", width=80, anchor='center')
 food_table.column("carbs", width=80, anchor='center')
@@ -783,34 +915,37 @@ QuantityEntry.grid(row=2, column=1, sticky="ew")
 
 # Add a label to display the unit of measurement
 UnitLabel = tk.Label(MacrosInputFrame, font=Font2)
-UnitLabel.grid(row=2, column=2, sticky="w")
+UnitLabel.grid(row=3, column=1, sticky="w")
 
 FoodTypeEntry.bind('<<ComboboxSelected>>', on_food_select)
 
-# Preview Frame and Labels
-#PreviewFrame = tk.Frame(MacrosFrame, padx=10, pady=10)
-#PreviewFrame.grid(row=2, column=0, sticky="ew")
+# Bind the tab change event
+notebook.bind("<<NotebookTabChanged>>", on_tab_selected)
 
-PreviewCaloriesVar = tk.StringVar(value="Calories: ")
-PreviewProteinVar = tk.StringVar(value="Protein: ")
-PreviewCarbsVar = tk.StringVar(value="Carbs: ")
-PreviewFatsVar = tk.StringVar(value="Fats: ")
 
-tk.Label(MacrosInputFrame, textvariable=PreviewCaloriesVar, font=Font2).grid(row=3, column=0,columnspan=2, sticky="w")
-tk.Label(MacrosInputFrame, textvariable=PreviewProteinVar, font=Font2).grid(row=4, column=0,columnspan=2, sticky="w")
-tk.Label(MacrosInputFrame, textvariable=PreviewCarbsVar, font=Font2).grid(row=5, column=0,columnspan=2, sticky="w")
-tk.Label(MacrosInputFrame, textvariable=PreviewFatsVar, font=Font2).grid(row=6, column=0,columnspan=2, sticky="w")
+PreviewCaloriesVar = tk.StringVar(value="Calories ")
+PreviewProteinVar = tk.StringVar(value="Protein   ")
+PreviewCarbsVar = tk.StringVar(value="Carbs     ")
+PreviewFatsVar = tk.StringVar(value="Fats      ")
+
+tk.Label(MacrosInputFrame, textvariable=PreviewCaloriesVar, font=Font2).grid(row=4, column=0,columnspan=2, sticky="w")
+tk.Label(MacrosInputFrame, textvariable=PreviewProteinVar, font=Font2).grid(row=5, column=0,columnspan=2, sticky="w")
+tk.Label(MacrosInputFrame, textvariable=PreviewCarbsVar, font=Font2).grid(row=6, column=0,columnspan=2, sticky="w")
+tk.Label(MacrosInputFrame, textvariable=PreviewFatsVar, font=Font2).grid(row=7, column=0,columnspan=2, sticky="w")
 
 # Bind the update function to the quantity variable
 QuantityVar.trace_add("write", update_nutritional_preview)
 
 
 # Add Button
-tk.Button(MacrosInputFrame, text="Add", command=add_to_macros, font=Font).grid(row=7, column=0, columnspan=2, pady=10)
+tk.Button(MacrosInputFrame, text="Add", command=add_to_macros, font=Font).grid(row=8, column=0, sticky="w", padx=10)
+
+# Add Delete Button
+tk.Button(MacrosInputFrame, text="Delete Selected", command=delete_selected_from_macros, font=Font).grid(row=8, column=1, sticky="w", padx=10)
 
 # Macros Table
 macros_table = ttk.Treeview(MacrosFrame, columns=("time", "food", "unit", "quantity", "calories", "protein", "carbs", "fats"), show='headings')
-macros_table.grid(row=1, column=0, sticky='nsew')
+macros_table.grid(row=1, column=0, sticky='nsew', padx=20, pady=10)
 
 # Define headings
 for col in macros_table['columns']:
@@ -835,8 +970,43 @@ macros_scrollbar = ttk.Scrollbar(MacrosFrame, orient="vertical", command=macros_
 macros_scrollbar.grid(row=1, column=1, sticky='ns')
 macros_table.configure(yscrollcommand=macros_scrollbar.set)
 
+
+# Create the summary table
+summary_table = ttk.Treeview(MacrosInputFrame, columns=("Category", "Calories", "Proteins (g)", "Proteins (%)", "Carbs (g)", "Carbs (%)", "Fats (g)", "Fats (%)"), show='headings')
+summary_table.grid(row=0, column=3, sticky='nsew',rowspan=8, padx=20, pady=10)
+
+# Customize the headers
+for col in summary_table['columns']:
+    summary_table.heading(col, text=col.replace("_", " ").capitalize())
+    summary_table.column(col, anchor='center')
+
+# Configure row tags for coloring and bold text
+summary_table.tag_configure('target_row', background='#D3D3D3')   # Grey
+summary_table.tag_configure('actuals_row', background='#ADD8E6')  # Light Blue
+summary_table.tag_configure('left_row', background='#90EE90')     # Light Green
+
+summary_row_ids = {}  # Global variable to store row IDs
+
+# Populate the table with initial rows (Target, Actuals, Left)
+for row_name in ["Target", "Actuals", "Left"]:
+    row_id = summary_table.insert('', 'end', values=(row_name, 0, 0, 0, 0, 0, 0, 0))
+    summary_row_ids[row_name] = row_id  # Store the row ID
+
+
+# Applying custom tags for each row
+summary_table.item(summary_row_ids['Target'], tags=('target_row', 'bold_text'))
+summary_table.item(summary_row_ids['Actuals'], tags=('actuals_row', 'bold_text'))
+summary_table.item(summary_row_ids['Left'], tags=('left_row', 'bold_text'))
+
+
+
+
+
+
+
+
 # Check for existing data before starting the main loop
-root.after(1000, CheckExistingData)
+root.after(1000, initialize)
 
 # UI Callbacks
 if __name__ == "__main__":
