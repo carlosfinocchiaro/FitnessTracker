@@ -214,6 +214,14 @@ def UpdateCalculations():
     
     # Update the results text box
     UpdateResultsText()
+    
+    # Enable the Macros and Foods tabs if Name is not empty
+    if Data['Name'][0]:
+        notebook.tab(MacrosFrame, state='normal')
+        notebook.tab(FoodsFrame, state='normal')
+    else:
+        notebook.tab(MacrosFrame, state='disabled')
+        notebook.tab(FoodsFrame, state='disabled')
 
 def SaveResults():
     # Check if Data is empty
@@ -328,8 +336,21 @@ def CheckExistingData():
                     ProteinPercentEntry.set(f"{last_row['Protein Percent']}%")
                     CarbsPercentEntry.set(f"{last_row['Carbs Percent']}%")
                     FatsPercentEntry.set(f"{last_row['Fats Percent']}%")
+                    
+                    # Force A calculation
+                    UpdateCalculations()
+                
+                # Load and Populate Foods Data
+                foods_file = file_path.replace('Calculation.csv', 'Foods.csv')
+                if os.path.isfile(foods_file):
+                    load_and_populate_foods(foods_file)
 
-
+def load_and_populate_foods(file_path):
+    df = pd.read_csv(file_path)
+    for _, row in df.iterrows():
+        food_table.insert('', 'end', values=list(row))
+    alternate_row_colors()
+        
 def CreateTableImage(CalculationFile):
     # Load the CSV data into a pandas DataFrame
     df = pd.read_csv(CalculationFile)
@@ -405,6 +426,79 @@ def AddPercent(*args, var):
         text = var.get()
         if len(text) > 0 and text[-1] != '%':
             var.set(text + '%')
+            
+def save_table_to_csv():
+    # Create a list to hold the data
+    data_to_save = []
+    for item in food_table.get_children():
+        data_to_save.append(food_table.item(item)['values'])
+    
+    # Convert the list to a DataFrame and save as CSV
+    df = pd.DataFrame(data_to_save, columns=["name", "unit", "measurement", "calories", "protein", "carbs", "fats"])
+    
+    # Preparing data to be saved
+    FileName = f"Results/{Data['Name'][0]}-Foods.csv"
+    df.to_csv(FileName, index=False)
+
+def sort_table():
+    # Retrieve all the items in the table
+    data = [(food_table.item(item_id)["values"]) for item_id in food_table.get_children('')]
+    # Sort the data by the food name (1st column)
+    data.sort(key=lambda x: x[0].lower())
+
+    # Clear current items in the table
+    for item in food_table.get_children():
+        food_table.delete(item)
+
+    # Reinsert the sorted items
+    for item in data:
+        food_table.insert('', 'end', values=item)
+
+def add_food():
+    # Extract values from entry fields
+    food_name = FoodNameVar.get().strip()
+    food_unit = FoodUnitVar.get().strip()
+    food_measurement = FoodMeasurementVar.get().strip()
+    food_calories = FoodCaloriesVar.get().strip()
+    food_protein = FoodProteinVar.get().strip()
+    food_carbs = FoodCarbsVar.get().strip()
+    food_fats = FoodFatsVar.get().strip()
+
+    # Check if any field is empty
+    if not all([food_name, food_unit, food_measurement, food_calories, food_protein, food_carbs, food_fats]):
+        messagebox.showwarning("Warning", "Please fill in all fields before adding a food item.")
+        return
+
+    # If all fields are filled, add the food item to the table
+    food_data = {
+        "name": food_name,
+        "unit": food_unit,
+        "measurement": food_measurement,
+        "calories": food_calories,
+        "protein": food_protein,
+        "carbs": food_carbs,
+        "fats": food_fats
+    }
+    food_table.insert('', 'end', values=list(food_data.values()))
+    sort_table()
+    save_table_to_csv()
+    alternate_row_colors()
+
+
+def remove_selected_food():
+    selected_item = food_table.selection()
+    if selected_item:
+        food_table.delete(selected_item)
+        sort_table()
+        save_table_to_csv()
+        alternate_row_colors()
+        
+def alternate_row_colors():
+    for index, item in enumerate(food_table.get_children()):
+        if index % 2 == 0:
+            food_table.item(item, tags=('evenrow',))
+        else:
+            food_table.item(item, tags=('oddrow',))
         
 # Variables
 Data = {}
@@ -424,8 +518,8 @@ FoodsFrame = ttk.Frame(notebook)
 
 # Add Frames to notebook as tabs
 notebook.add(CalculatorFrame, text="Calculator")
-notebook.add(MacrosFrame, text="Macros")
-notebook.add(FoodsFrame, text="Foods")
+notebook.add(MacrosFrame, text="Macros", state='disabled')
+notebook.add(FoodsFrame, text="Foods", state='disabled')
 
 # Variables
 NameEntry = tk.StringVar()
@@ -506,8 +600,70 @@ tk.Button(ButtonsFrame, text="Save Results", command=SaveResults, font=Font).pac
 ResultsText = tk.Text(ResultsFrame, font=Font, width=55, height=21)
 ResultsText.grid(row=0, column=0,sticky='we')
 
+# Variables for food entry
+FoodNameVar = tk.StringVar()
+FoodUnitVar = tk.StringVar()
+FoodMeasurementVar = tk.StringVar()
+FoodCaloriesVar = tk.StringVar()
+FoodProteinVar = tk.StringVar()
+FoodCarbsVar = tk.StringVar()
+FoodFatsVar = tk.StringVar()
+
+# Food Entry Frame
+FoodEntryFrame = tk.Frame(FoodsFrame, padx=10, pady=10)
+FoodEntryFrame.grid(row=0, column=0, sticky="ew")
+
+# Food Entry Widgets
+tk.Label(FoodEntryFrame, text="Food Name", font=Font2).grid(row=0, column=0, sticky="w")
+tk.Entry(FoodEntryFrame, textvariable=FoodNameVar, font=Font).grid(row=0, column=1, sticky="ew")
+
+tk.Label(FoodEntryFrame, text="Unit", font=Font2).grid(row=1, column=0, sticky="w")
+tk.Entry(FoodEntryFrame, textvariable=FoodUnitVar, font=Font).grid(row=1, column=1, sticky="ew")
+
+tk.Label(FoodEntryFrame, text="Measurement", font=Font2).grid(row=2, column=0, sticky="w")
+tk.Entry(FoodEntryFrame, textvariable=FoodMeasurementVar, font=Font).grid(row=2, column=1, sticky="ew")
+
+tk.Label(FoodEntryFrame, text="Calories", font=Font2).grid(row=3, column=0, sticky="w")
+tk.Entry(FoodEntryFrame, textvariable=FoodCaloriesVar, font=Font).grid(row=3, column=1, sticky="ew")
+
+tk.Label(FoodEntryFrame, text="Protein (g)", font=Font2).grid(row=4, column=0, sticky="w")
+tk.Entry(FoodEntryFrame, textvariable=FoodProteinVar, font=Font).grid(row=4, column=1, sticky="ew")
+
+tk.Label(FoodEntryFrame, text="Carbs (g)", font=Font2).grid(row=5, column=0, sticky="w")
+tk.Entry(FoodEntryFrame, textvariable=FoodCarbsVar, font=Font).grid(row=5, column=1, sticky="ew")
+
+tk.Label(FoodEntryFrame, text="Fats (g)", font=Font2).grid(row=6, column=0, sticky="w")
+tk.Entry(FoodEntryFrame, textvariable=FoodFatsVar, font=Font).grid(row=6, column=1, sticky="ew")
+
+# Add and Remove Buttons
+tk.Button(FoodEntryFrame, text="Add Food", command=add_food, font=Font).grid(row=7, column=0, padx=10, pady=10)
+tk.Button(FoodEntryFrame, text="Remove Selected", command=remove_selected_food, font=Font).grid(row=7, column=1, padx=10, pady=10)
+
+# Food Table
+food_table = ttk.Treeview(FoodsFrame, columns=("name", "unit", "measurement", "calories", "protein", "carbs", "fats"), show='headings')
+food_table.grid(row=1, column=0, sticky='nsew')
+
+# Configure row tags
+food_table.tag_configure('evenrow', background='#FFFFFF')  # White
+food_table.tag_configure('oddrow', background='#E8E8E8')   # Light Grey
+
+
+# Define headings
+for col in food_table['columns']:
+    food_table.heading(col, text=col.capitalize())
+
+# Adjust column alignments
+food_table.column("name", width=120, anchor='w')
+food_table.column("unit", width=80, anchor='center')
+food_table.column("measurement", width=80, anchor='center')
+food_table.column("calories", width=80, anchor='center')
+food_table.column("protein", width=80, anchor='center')
+food_table.column("carbs", width=80, anchor='center')
+food_table.column("fats", width=80, anchor='center')
+
+
 # Check for existing data before starting the main loop
-CheckExistingData()
+root.after(1000, CheckExistingData)
 
 # UI Callbacks
 if __name__ == "__main__":
