@@ -63,6 +63,9 @@ def CalculateActivityMultiplier(DaysOfTrainingPerWeek):
         return 1.95
 
 def CalculateMaintenanceCalories(Age, Weight, Height, DaysOfTrainingPerWeek, Gender):
+    # Variables
+    BMR = 0
+
     # Convert weight from pounds to kilograms
     Weight_kg = Weight / 2.20462
     
@@ -302,9 +305,6 @@ def SaveResults():
                     f"{Data['Protein'][0]},"
                     f"{Data['Carbs'][0]},"
                     f"{Data['Fats'][0]}\n"))
-    
-    # Create table image
-    CreateTableImage(FileName)
 
     # Show message box
     messagebox.showinfo("Saved", "Results and table image saved successfully!")
@@ -326,8 +326,8 @@ def CheckExistingData():
                     last_row = df.iloc[-1]
 
                     # Update the UI fields
-                    NameEntry.set(last_row['Name'])
-                    GenderVar.set(last_row['Gender'])
+                    NameEntry.set(str(last_row['Name']))
+                    GenderVar.set(str(last_row['Gender']))
                     AgeEntry.set(str(last_row['Age']))
                     WeightEntry.set(str(last_row['Weight']))
                     HeightEntry.set(str(last_row['Height']))
@@ -363,49 +363,11 @@ def load_and_populate_macros(file_path):
     df = pd.read_csv(file_path)
     for _, row in df.iterrows():
         macros_table.insert('', 'end', values=list(row))
-        
-def CreateTableImage(CalculationFile):
-    # Load the CSV data into a pandas DataFrame
-    df = pd.read_csv(CalculationFile)
-
-    # Determine the size of the figure dynamically
-    figure_width = max(24, len(df.columns) * 2)  # Adjust as needed
-    figure_height = max(8, len(df) * 0.5)  # Adjust as needed
-
-    # Create a figure and a set of subplots
-    fig, ax = plt.subplots(figsize=(figure_width, figure_height))
-    ax.axis('off')
-
-    # Create the table
-    table = plt.table(cellText=df.values, colLabels=df.columns, loc='center', cellLoc='center')
-
-    # Set properties for the table
-    table.auto_set_font_size(False)
-    table.set_fontsize(26)  # Choose a font size that fits your needs
-    table.scale(1, 3)  # Increase row height, adjust scale to fit
-
-    table.auto_set_column_width(col=list(range(len(df.columns))))  # Adjust column width automatically
-    
-    # Highlight the last four columns of the last row in yellow
-    last_row_idx = len(df)
-    for col_idx in range(len(df.columns) - 4, len(df.columns)):
-        cell = table[(last_row_idx, col_idx)]
-        cell.set_facecolor('yellow')
-        cell.set_edgecolor('black')
-
-    # Adjust layout
-    plt.tight_layout()
-    
-    # Preparing data to be saved
-    FileName = f"Results/{Data['Name'][0]}-Calculation.pdf"
-
-    # Save the figure with minimal padding
-    plt.savefig(FileName, bbox_inches='tight', pad_inches=0.1)
-
-    # Close the figure
-    plt.close(fig)
 
 def UpdateResultsText():
+    # Temporarily enable the widget to modify its content
+    ResultsText.config(state=tk.NORMAL)
+
     # Clear the text box
     ResultsText.delete('1.0', tk.END)
 
@@ -434,6 +396,9 @@ def UpdateResultsText():
         
         # Insert the formatted line into the text box
         ResultsText.insert(tk.END, line)
+
+    # Disable the widget to prevent user editing
+    ResultsText.config(state=tk.DISABLED)
         
 def AddPercent(*args, var):
         text = var.get()
@@ -465,7 +430,7 @@ def sort_table():
 
     # Reinsert the sorted items
     for item in data:
-        food_table.insert('', 'end', values=item)
+        food_table.insert('', 'end', values=list(item))
 
 def add_food():
     # Extract values from entry fields
@@ -492,17 +457,30 @@ def add_food():
         "carbs": food_carbs,
         "fats": food_fats
     }
+
+    # Add the food data to the table
     food_table.insert('', 'end', values=list(food_data.values()))
+
+    # Sort the table and save it to a CSV file
     sort_table()
     save_table_to_csv()
     alternate_row_colors()
     update_food_type_entry()
 
+    # Clear input fields or reset them to default values
+    FoodNameVar.set("")
+    FoodUnitVar.set("")
+    FoodMeasurementVar.set("")
+    FoodCaloriesVar.set("")
+    FoodProteinVar.set("")
+    FoodCarbsVar.set("")
+    FoodFatsVar.set("")
 
 def remove_selected_food():
-    selected_item = food_table.selection()
-    if selected_item:
-        food_table.delete(selected_item)
+    selected_items = food_table.selection()
+    if selected_items:
+        for item_id in selected_items:
+            food_table.delete(item_id)
         sort_table()
         save_table_to_csv()
         alternate_row_colors()
@@ -553,6 +531,20 @@ def add_to_macros():
     # Add data to macros table (including the unit)
     unit = food_data[1]  # Get the unit from the selected food
     macros_table.insert('', 'end', values=(time, food_name, unit, quantity, calories, protein, carbs, fats), tags=('evenrow', 'oddrow')[(len(macros_table.get_children()) % 2)])
+    
+    # Clear input fields or reset them to default values
+    TimeVar.set("")
+    FoodTypeVar.set("")
+    QuantityVar.set("")
+
+    # Update the preview labels
+    PreviewCaloriesVar.set(f"Calories  ")
+    PreviewProteinVar.set(f"Protein   ")
+    PreviewCarbsVar.set(f"Carbs     ")
+    PreviewFatsVar.set(f"Fats      ")
+
+    # Update the summary table
+    sort_macros_table()
     update_summary_table()
     save_macros_to_csv()
     
@@ -567,7 +559,7 @@ def on_food_select(event):
             UnitLabel.config(text=f"{unit}")
             break
     else:
-        UnitLabel.config(text="Unit: -")
+        UnitLabel.config(text="Unit not found")
     update_nutritional_preview()
 
 def update_nutritional_preview(*args):
@@ -603,11 +595,13 @@ def update_nutritional_preview(*args):
     PreviewFatsVar.set(f"Fats      {fats:.2f}g")
         
 def delete_selected_from_macros():
-    selected_item = macros_table.selection()
-    if selected_item:
-        macros_table.delete(selected_item)
+    selected_items = macros_table.selection()
+    if selected_items:
+        for item in selected_items:
+            macros_table.delete(item)
     else:
         messagebox.showwarning("Warning", "No item selected")
+    sort_macros_table()
     update_summary_table()
     save_macros_to_csv()
         
@@ -621,7 +615,7 @@ def get_target_values():
     return targets
 
 def calculate_actuals():
-    actuals = {'Calories': 0, 'Proteins (g)': 0, 'Carbs (g)': 0, 'Fats (g)': 0}
+    actuals = {'Calories': 0.0, 'Proteins (g)': 0.0, 'Carbs (g)': 0.0, 'Fats (g)': 0.0}
     for item in macros_table.get_children():
         values = macros_table.item(item, 'values')
         actuals['Calories'] += float(values[4])
@@ -690,14 +684,10 @@ def update_summary_table():
     summary_table.item(summary_row_ids['Actuals'], tags=('actuals_row', 'bold_text'))
     summary_table.item(summary_row_ids['Left'], tags=('left_row', 'bold_text'))
 
-
-
-
 def initialize():
     CheckExistingData()
     time.sleep(0.1)
     update_summary_table()
-
 
 def save_macros_to_csv():
     # Create a list to hold the data
@@ -718,6 +708,112 @@ def on_tab_selected(event):
     if selected_tab_name == "Macros":
         update_summary_table()
 
+def edit_selected_from_macros():
+    selected_items = macros_table.selection()
+    if not selected_items:
+        messagebox.showwarning("Warning", "No item selected for editing")
+        return
+
+    # Assume single selection for simplicity
+    item_id = selected_items[0]
+    selected_item = macros_table.item(item_id, 'values')
+
+    # Pre-populate the Time and Quantity fields with selected item's details
+    TimeVar.set(selected_item[0])
+    FoodTypeVar.set(selected_item[1])
+    QuantityVar.set(selected_item[3])
+
+    # Disable Add button to prevent adding new items while editing
+    addButton['state'] = 'disabled'
+    delete_buton['state'] = 'disabled'
+    # Change Edit button text to "Update" and bind it to a new function to update the item
+    editButton['text'] = 'Update'
+    editButton['command'] = lambda: update_selected_in_macros(item_id)
+
+def update_selected_in_macros(item_id):
+    # Validate input as necessary
+    new_time = TimeVar.get()
+    new_food_name = FoodTypeVar.get()
+    new_quantity = QuantityVar.get()
+    if not all([new_time, new_food_name, new_quantity]):
+        messagebox.showwarning("Warning", "Please fill in all fields")
+        return
+    
+    # Find the selected food in the Foods table
+    for item in food_table.get_children():
+        if food_table.item(item)['values'][0] == new_food_name:
+            food_data = food_table.item(item)['values']
+            break
+    else:
+        messagebox.showerror("Error", "Selected food not found in Foods table")
+        return
+
+    try:
+        quantity = float(new_quantity)  # Convert quantity to a number
+    except ValueError:
+        messagebox.showerror("Error", "Invalid quantity")
+        return
+
+    # Calculate nutritional values
+    measurement, calories, protein, carbs, fats = food_data[2:]  # Skip name and unit columns
+    calories = (float(calories) * quantity) / float(measurement)
+    protein = (float(protein) * quantity) / float(measurement)
+    carbs = (float(carbs) * quantity) / float(measurement)
+    fats = (float(fats) * quantity) / float(measurement)
+    unit = food_data[1]
+    new_values = (new_time, new_food_name, unit, new_quantity, calories, protein, carbs, fats)
+
+    # Update the item in the table
+    macros_table.item(item_id, values=new_values)
+
+    # Reset UI
+    addButton['state'] = 'normal'
+    delete_buton['state'] = 'normal'
+    editButton['text'] = 'Edit Selected'
+    editButton['command'] = edit_selected_from_macros
+
+    # Clear input fields or reset them to default values
+    TimeVar.set("")
+    FoodTypeVar.set("")
+    QuantityVar.set("")
+
+    # Update the preview labels
+    PreviewCaloriesVar.set(f"Calories  ")
+    PreviewProteinVar.set(f"Protein   ")
+    PreviewCarbsVar.set(f"Carbs     ")
+    PreviewFatsVar.set(f"Fats      ")
+
+    # Update the summary table
+    sort_macros_table()
+    update_summary_table()
+    save_macros_to_csv()
+
+def sort_macros_table():
+    # Retrieve all the items in the table
+    time_of_day_order = {
+        "Breakfast": 1,
+        "Morning Snack": 2,
+        "Lunch": 3,
+        "Afternoon Snack": 4,
+        "Dinner": 5,
+        "Evening Snack": 6,
+        "Other": 7
+    }
+
+    # Retrieve all items and their values from the table
+    items_with_values = [(item_id, macros_table.item(item_id)["values"]) for item_id in macros_table.get_children('')]
+    
+    # Sort items based on the custom time of day order
+    sorted_items = sorted(items_with_values, key=lambda x: time_of_day_order.get(x[1][0], 8))
+
+    # Clear the table
+    macros_table.delete(*macros_table.get_children())
+
+    # Reinsert items in sorted order, ensuring values are in list format
+    for item_id, values in sorted_items:
+        # Ensure values are formatted as a list or tuple
+        formatted_values = list(values) if isinstance(values, (list, tuple)) else []
+        macros_table.insert('', 'end', values=formatted_values)
 
 # Variables
 Data = {}
@@ -758,7 +854,6 @@ BodyFatPercentLossPerWeekEntry = tk.StringVar()
 ProteinPercentEntry = tk.StringVar()
 CarbsPercentEntry = tk.StringVar()
 FatsPercentEntry = tk.StringVar()
-ResultsText = tk.StringVar()
 
 # Frames
 InputFrame = tk.Frame(CalculatorFrame, padx=10, pady=10)
@@ -933,10 +1028,12 @@ UnitLabel = tk.Label(MacrosInputFrame, font=Font2)
 UnitLabel.grid(row=3, column=1, sticky="w")
 
 FoodTypeEntry.bind('<<ComboboxSelected>>', on_food_select)
+def on_food_type_var_change(*args):
+    on_food_select("<<ComboboxSelected>>")
+FoodTypeVar.trace_add("write", on_food_type_var_change)
 
 # Bind the tab change event
 notebook.bind("<<NotebookTabChanged>>", on_tab_selected)
-
 
 PreviewCaloriesVar = tk.StringVar(value="Calories ")
 PreviewProteinVar = tk.StringVar(value="Protein   ")
@@ -953,10 +1050,17 @@ QuantityVar.trace_add("write", update_nutritional_preview)
 
 
 # Add Button
-tk.Button(MacrosInputFrame, text="Add", command=add_to_macros, font=Font).grid(row=8, column=0, sticky="w", padx=10)
+addButton = tk.Button(MacrosInputFrame, text="Add to Macros", command=add_to_macros, font=Font)
+addButton.grid(row=8, column=0, sticky="w", padx=10, pady=10)
 
 # Add Delete Button
-tk.Button(MacrosInputFrame, text="Delete Selected", command=delete_selected_from_macros, font=Font).grid(row=8, column=1, sticky="w", padx=10)
+delete_buton = tk.Button(MacrosInputFrame, text="Delete Selected", command=delete_selected_from_macros, font=Font)
+delete_buton.grid(row=9, column=0, sticky="w", padx=10, pady=10)
+
+# Add Edit Button
+editButton = tk.Button(MacrosInputFrame, text="Edit Selected", command=edit_selected_from_macros, font=Font)
+editButton.grid(row=9, column=1, sticky="w", padx=10, pady=10)
+
 
 # Macros Table
 macros_table = ttk.Treeview(MacrosFrame, columns=("time", "food", "unit", "quantity", "calories", "protein", "carbs", "fats"), show='headings')
