@@ -1,11 +1,12 @@
+from calendar import c
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 from tkinter import filedialog
-import tkinter.font as tkFont
 import datetime
 import os
 import math
+from turtle import st
 import pandas as pd
 import matplotlib.pyplot as plt
 import time
@@ -224,9 +225,11 @@ def UpdateCalculations():
     if Data['Name'][0]:
         notebook.tab(MacrosFrame, state='normal')
         notebook.tab(FoodsFrame, state='normal')
+        notebook.tab(DashboardFrame, state="normal")
     else:
         notebook.tab(MacrosFrame, state='disabled')
         notebook.tab(FoodsFrame, state='disabled')
+        notebook.tab(DashboardFrame, state="disabled")
 
 def SaveResults():
     # Check if Data is empty
@@ -707,6 +710,8 @@ def on_tab_selected(event):
     selected_tab_name = event.widget.tab(selected_tab, "text")
     if selected_tab_name == "Macros":
         update_summary_table()
+    if selected_tab_name == "Dashboard":
+        load_dashboard_data()
 
 def edit_selected_from_macros():
     selected_items = macros_table.selection()
@@ -1120,9 +1125,182 @@ summary_table.item(summary_row_ids['Target'], tags=('target_row', 'bold_text'))
 summary_table.item(summary_row_ids['Actuals'], tags=('actuals_row', 'bold_text'))
 summary_table.item(summary_row_ids['Left'], tags=('left_row', 'bold_text'))
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Add a new Dashboard Frame to the notebook
+DashboardFrame = ttk.Frame(notebook)
+notebook.add(DashboardFrame, text="Dashboard", state='disabled')
+
+# Assume this code is added to your existing script where other imports are defined
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import pandas as pd
+from matplotlib.dates import DateFormatter
+
+
+# Step 2: Implement a function to create and display charts
+def create_weight_progress_chart(frame):
+    # Preparing data to be saved
+    FileName = f"Results/{Data['Name'][0]}-Calculation.csv"
+    if not os.path.exists(FileName):
+        return
+
+    # Load weight data
+    data = pd.read_csv(FileName)
+    dates = pd.to_datetime(data['Date'],format='mixed')
+    weights = data['Weight']
+
+    # Create a figure and plot the data
+    fig, ax = plt.subplots(figsize=(6,3))
+    ax.plot(dates, weights, marker='o', linestyle='-', color='blue')
+    ax.set_title('Weight Loss Progress')
+    ax.set_ylabel('Weight (lbs)')
+    ax.tick_params(axis='both', which='major', labelsize=6)
+
+    # Set date format on x-axis
+    ax.xaxis.set_major_formatter(DateFormatter('%m/%d'))
+
+    # Embed the chart in the tkinter frame
+    canvas = FigureCanvasTkAgg(fig, master=frame)
+    canvas.draw()
+    canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
+
+def create_body_fat_progress_chart(frame):
+    # Preparing data to be saved
+    FileName = f"Results/{Data['Name'][0]}-Calculation.csv"
+    if not os.path.exists(FileName):
+        return
+
+    # Load data
+    data = pd.read_csv(FileName)
+    dates = pd.to_datetime(data['Date'],format='mixed')
+    body_fat_percent = data['Body Fat Percent']
+
+    # Create a figure and plot the data
+    fig, ax = plt.subplots(figsize=(6,3))
+    ax.plot(dates, body_fat_percent, marker='o', linestyle='-', color='green')
+    ax.set_title('Body Fat Percentage Progress')
+    ax.set_ylabel('Body Fat %')
+    ax.tick_params(axis='both', which='major', labelsize=6)
+
+    # Set date format on x-axis
+    ax.xaxis.set_major_formatter(DateFormatter('%m/%d'))
+
+    # Embed the chart in the tkinter frame
+    canvas = FigureCanvasTkAgg(fig, master=frame)
+    canvas.draw()
+    canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
+
+def create_bmi_progress_chart(frame):
+    # Preparing data to be saved
+    FileName = f"Results/{Data['Name'][0]}-Calculation.csv"
+    if not os.path.exists(FileName):
+        return
+
+    # Load data
+    data = pd.read_csv(FileName)
+    dates = pd.to_datetime(data['Date'],format='mixed')
+    bmi = data['BMI']
+
+    # Create a figure and plot the data
+    fig, ax = plt.subplots(figsize=(6,3))
+    ax.plot(dates, bmi, marker='o', linestyle='-', color='purple')
+    ax.set_title('BMI Progress')
+    ax.set_ylabel('BMI')
+    ax.tick_params(axis='both', which='major', labelsize=6)
+
+    # Set date format on x-axis
+    ax.xaxis.set_major_formatter(DateFormatter('%m/%d'))
+
+    # Embed the chart in the tkinter frame
+    canvas = FigureCanvasTkAgg(fig, master=frame)
+    canvas.draw()
+    canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
+
+def create_calories_progress_chart(frame):
+    # Preparing data to be saved
+    FileName = f"Results/{Data['Name'][0]}-Calculation.csv"
+    if not os.path.exists(FileName):
+        return
+
+    # Load data
+    data = pd.read_csv(FileName)
+    dates = pd.to_datetime(data['Date'],format='mixed')
+    calories = data['Maintenace cal']
+
+    # Create a figure and plot the data
+    fig, ax = plt.subplots(figsize=(6,3))
+    ax.plot(dates, calories, marker='o', linestyle='-', color='red')
+    ax.set_title('Calories Per Day Progress')
+    ax.set_ylabel('Calories')
+    ax.tick_params(axis='both', which='major', labelsize=6)
+
+    # Set date format on x-axis
+    ax.xaxis.set_major_formatter(DateFormatter('%m/%d'))
+
+    # Embed the chart in the tkinter frame
+    canvas = FigureCanvasTkAgg(fig, master=frame)
+    canvas.draw()
+    canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
+
+
+
+def load_dashboard_data():
+    # Clear existing content in the dashboard frame
+    for widget in DashboardFrame.winfo_children():
+        widget.destroy()
+    
+    # Create sub-frames for each chart, arranging them in two columns
+    frame1 = ttk.Frame(DashboardFrame)
+    frame1.grid(row=0, column=0, padx=5, pady=5)
+    frame2 = ttk.Frame(DashboardFrame)
+    frame2.grid(row=0, column=1, padx=5, pady=5)
+    frame3 = ttk.Frame(DashboardFrame)
+    frame3.grid(row=1, column=0, padx=5, pady=5)
+    frame4 = ttk.Frame(DashboardFrame)
+    frame4.grid(row=1, column=1, padx=5, pady=5)
+
+    # Make the frames expand with the window
+    DashboardFrame.grid_rowconfigure(0, weight=1)
+    DashboardFrame.grid_rowconfigure(1, weight=1)
+    DashboardFrame.grid_columnconfigure(0, weight=1)
+    DashboardFrame.grid_columnconfigure(1, weight=1)
+    
+    # Create charts and display them in the designated sub-frames
+    create_weight_progress_chart(frame1)
+    create_body_fat_progress_chart(frame2)
+    create_bmi_progress_chart(frame3)
+    create_calories_progress_chart(frame4)
+
+
+
+
+
+
+
+
+
+
 # Check for existing data before starting the main loop
 root.after(1000, initialize)
 
 # UI Callbacks
 if __name__ == "__main__":
+    root.protocol("WM_DELETE_WINDOW", root.quit)
     root.mainloop()
