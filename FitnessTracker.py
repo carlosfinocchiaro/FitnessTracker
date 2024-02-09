@@ -526,10 +526,12 @@ def add_to_macros():
 
     # Calculate nutritional values
     measurement, calories, protein, carbs, fats = food_data[2:]  # Skip name and unit columns
-    calories = (float(calories) * quantity) / float(measurement)
-    protein = (float(protein) * quantity) / float(measurement)
-    carbs = (float(carbs) * quantity) / float(measurement)
-    fats = (float(fats) * quantity) / float(measurement)
+    # Calculate nutritional values and format them to one decimal place
+    calories = round((float(calories) * quantity) / float(measurement), 1)
+    protein = round((float(protein) * quantity) / float(measurement), 1)
+    carbs = round((float(carbs) * quantity) / float(measurement), 1)
+    fats = round((float(fats) * quantity) / float(measurement), 1)
+
 
     # Add data to macros table (including the unit)
     unit = food_data[1]  # Get the unit from the selected food
@@ -668,19 +670,20 @@ def update_summary_table():
 
         return protein_percentage, carbs_percentage, fats_percentage
 
-    # Update each row in the summary table
+    # Inside the update_summary_table function, when setting the values for each row
     for row_name, values in [("Target", targets), ("Actuals", actuals), ("Left", left)]:
         protein_percentage, carbs_percentage, fats_percentage = calculate_percentages(row_name, values)
         summary_table.item(summary_row_ids[row_name], values=(
             row_name,
-            values['Calories'],
-            values['Proteins (g)'],
+            round(values['Calories'], 1),
+            round(values['Proteins (g)'], 1),
             protein_percentage,
-            values['Carbs (g)'],
+            round(values['Carbs (g)'], 1),
             carbs_percentage,
-            values['Fats (g)'],
+            round(values['Fats (g)'], 1),
             fats_percentage
         ))
+
 
     # Applying custom tags for each row
     summary_table.item(summary_row_ids['Target'], tags=('target_row', 'bold_text'))
@@ -761,10 +764,10 @@ def update_selected_in_macros(item_id):
 
     # Calculate nutritional values
     measurement, calories, protein, carbs, fats = food_data[2:]  # Skip name and unit columns
-    calories = (float(calories) * quantity) / float(measurement)
-    protein = (float(protein) * quantity) / float(measurement)
-    carbs = (float(carbs) * quantity) / float(measurement)
-    fats = (float(fats) * quantity) / float(measurement)
+    calories = round((float(calories) * quantity) / float(measurement), 1)
+    protein = round((float(protein) * quantity) / float(measurement), 1)
+    carbs = round((float(carbs) * quantity) / float(measurement), 1)
+    fats = round((float(fats) * quantity) / float(measurement), 1)
     unit = food_data[1]
     new_values = (new_time, new_food_name, unit, new_quantity, calories, protein, carbs, fats)
 
@@ -1125,20 +1128,6 @@ summary_table.item(summary_row_ids['Target'], tags=('target_row', 'bold_text'))
 summary_table.item(summary_row_ids['Actuals'], tags=('actuals_row', 'bold_text'))
 summary_table.item(summary_row_ids['Left'], tags=('left_row', 'bold_text'))
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # Add a new Dashboard Frame to the notebook
 DashboardFrame = ttk.Frame(notebook)
 notebook.add(DashboardFrame, text="Dashboard", state='disabled')
@@ -1258,9 +1247,6 @@ def create_calories_progress_chart(frame):
     canvas.draw()
     canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
-
-
-
 def load_dashboard_data():
     # Clear existing content in the dashboard frame
     for widget in DashboardFrame.winfo_children():
@@ -1287,15 +1273,6 @@ def load_dashboard_data():
     create_body_fat_progress_chart(frame2)
     create_bmi_progress_chart(frame3)
     create_calories_progress_chart(frame4)
-
-
-
-
-
-
-
-
-
 
 # Check for existing data before starting the main loop
 root.after(1000, initialize)
